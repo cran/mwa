@@ -1,0 +1,4 @@
+exportPattern("^[[:alpha:]]+")
+importFrom("rJava", .jpackage)
+importFrom("MASS")
+importFrom("cem")

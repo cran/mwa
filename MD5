@@ -1,0 +1,15 @@
+4cef8c3855b14779d1a106640269272a *DESCRIPTION
+87a495d5a3407033df4ac18f04c34cdc *NAMESPACE
+49ddf69a30e53555a8599671f5c1a24f *R/mwa.R
+b3a9c52ccdc0718d588e6b33c0d5a1a9 *R/onLoad.R
+3d95e9acb23ef1558d753b252d568b04 *data/mwa_data.rda
+ff9ca3f3e29cb502f4d4281ee65a7c3c *inst/java/WakeCounter.jar
+91ff0fa9d26ed27ad2b0da211114fdcc *inst/javasrc/WakeCounter.java
+c7742d9989b8dc0587e2653928e0e0cf *man/matchedwake.Rd
+ddf972938c8c090353e13ad289916410 *man/mwa-package.Rd
+1dd86cca04c98d9d0bd2900348ff39fb *man/mwa_data.Rd
+2b77e0ec6342daca7da92e2301843c2c *man/plot.matchedwake.Rd
+fabe000af34c5651066b9585d8b8c359 *man/print.matchedwake.Rd
+90370b45c6dda9a059b905ecdbec6735 *man/slideWakeMatch.Rd
+fcc9b05f4518538f3196bde5c2602e7e *man/slidingWake.Rd
+73592d74d59669c8fdc717854b970142 *man/summary.matchedwake.Rd
