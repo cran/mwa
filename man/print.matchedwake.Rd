@@ -21,7 +21,7 @@ Overloads the default \code{print()} for objects of class \code{matchedwake}.
 Returns a \code{data.frame} with all significant results (significance level is \kbd{alpha1} as retrieved from \code{x$parameters}).
 }
 \references{
-Schutte, S., Donnay, K. (2014). ``Matched Wake Analysis: Identifying Causal Relationships in Spatiotemporal Event Data.'' Forthcoming in \emph{Political Geography}.
+Schutte, S., Donnay, K. (2014). ``Matched wake analysis: Finding causal relationships in spatiotemporal event data.'' \emph{Political Geography} 41:1-10.
 }
 \author{
   Sebastian Schutte and Karsten Donnay.

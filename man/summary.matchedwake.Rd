@@ -24,7 +24,7 @@ Overloads the default \code{summary()} for objects of class \code{matchedwake}.
 Returns a \code{data.frame} with an overview of all significant results (significance level is \kbd{alpha1} as retrieved from \code{x$parameters}). If \code{detailed = TRUE} this overview includes a number of matching statistics and statistics on overlaps of the spatiotemporal cylinders.
 }
 \references{
-Schutte, S., Donnay, K. (2014). ``Matched Wake Analysis: Identifying Causal Relationships in Spatiotemporal Event Data.'' Forthcoming in \emph{Political Geography}.
+Schutte, S., Donnay, K. (2014). ``Matched wake analysis: Finding causal relationships in spatiotemporal event data.'' \emph{Political Geography} 41:1-10.
 }
 \author{
   Sebastian Schutte and Karsten Donnay.

@@ -93,7 +93,7 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     stop("matchedwake(data, t_window, spat_window,...) was not executed!", call.=FALSE)
   }else{
     call <- match.call()
-    cat('MWA: Analyzing causal effects in spatiotemporal event data.\n\nPlease always cite:\nSchutte, S., Donnay, K. (2014). "Matched Wake Analysis: Identifying Causal Relationships in Spatiotemporal Event Data." Forthcoming in Political Geography.\n\n\nATTENTION: Depending on the size of the dataset and the number of spatial and temporal windows, iterations can take some time!\n\n')
+    cat('MWA: Analyzing causal effects in spatiotemporal event data.\n\nPlease always cite:\nSchutte, S., Donnay, K. (2014). "Matched wake analysis: Finding causal relationships in spatiotemporal event data." Political Geography 41:1-10.\n\n\nATTENTION: Depending on the size of the dataset and the number of spatial and temporal windows, iterations can take some time!\n\n')
     cat(paste('matchedwake(data = ', call$data,', t_window = ', call$t_window,', spat_window = ', call$spat_window,', ...):\n', sep = "")) 
     wakes <- slidingWake(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls, memory)
     if (deleteSUTVA){
@@ -236,7 +236,6 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
   if (length(nbinputs) > 0){
     names(nbinputs) <- unlist(lapply(1:length(nbinputs), function(x) unlist(strsplit(names(nbinputs[x]),split="glm.nb."))[2]))
   }
-  print(nbinputs)
   formula <- "dependent_post ~ dependent_pre + treatment"
   if (length(estimationControls) > 0){
     form_unlist <- unlist(strsplit(formula,split="\\+"))

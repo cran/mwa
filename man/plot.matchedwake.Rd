@@ -18,7 +18,7 @@ Overloads the default \code{plot()} for objects of class \code{matchedwake}. Ret
 }
 }
 \references{
-Schutte, S., Donnay, K. (2014). ``Matched Wake Analysis: Identifying Causal Relationships in Spatiotemporal Event Data.'' Forthcoming in \emph{Political Geography}.
+Schutte, S., Donnay, K. (2014). ``Matched wake analysis: Finding causal relationships in spatiotemporal event data.'' \emph{Political Geography} 41:1-10.
 }
 \author{
   Sebastian Schutte and Karsten Donnay.

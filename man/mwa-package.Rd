@@ -15,7 +15,7 @@ The full functionality of MWA is given through \code{\link{matchedwake}}, which 
 Sebastian Schutte and Karsten Donnay
 }
 \references{
-Schutte, S., Donnay, K. (2014). ``Matched Wake Analysis: Finding Causal Relationships in Spatiotemporal Event Data.'' Forthcoming in \emph{Political Geography}.
+Schutte, S., Donnay, K. (2014). ``Matched wake analysis: Finding causal relationships in spatiotemporal event data.'' \emph{Political Geography} 41:1-10.
 }
 \seealso{
    \code{\link{matchedwake}}, \code{\link{slidingWake}}, \code{\link{slideWakeMatch}}, \code{\link{print}}, \code{\link{summary}}, \code{\link{plot}}
