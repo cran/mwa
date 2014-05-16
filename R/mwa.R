@@ -13,8 +13,8 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     missing_arguments <- append(missing_arguments,'\n  data: lat column is missing')
     terminate <- TRUE
   }
-  if (!is.element('long',names(data))){
-    missing_arguments <- append(missing_arguments,'\n  data: long column is missing')
+  if (!is.element('lon',names(data))){
+    missing_arguments <- append(missing_arguments,'\n  data: lon column is missing')
     terminate <- TRUE
   }
   if (missing(t_window)){
@@ -29,24 +29,53 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     missing_arguments <- append(missing_arguments,'\n  treatment')
     terminate <- TRUE
   }
+  if (length(which(treatment[1]==names(data)))==0){
+    missing_arguments <- append(missing_arguments,'\n  treatment (column name misspecified)')
+    terminate <- TRUE
+  }else if (length(which(treatment[2]==unique(data[,which(names(data)==treatment[1])])))==0){
+    missing_arguments <- append(missing_arguments,'\n  treatment (value misspecified)')
+    terminate <- TRUE
+  }
   if (missing(control)){
     missing_arguments <- append(missing_arguments,'\n  control')
+    terminate <- TRUE
+  }
+  if (length(which(control[1]==names(data)))==0){
+    missing_arguments <- append(missing_arguments,'\n  control (column name misspecified)')
+    terminate <- TRUE
+  }else  if (length(which(control[2]==unique(data[,which(names(data)==control[1])])))==0){
+    missing_arguments <- append(missing_arguments,'\n  control (value misspecified)')
     terminate <- TRUE
   }
   if (missing(dependent)){
     missing_arguments <- append(missing_arguments,'\n  dependent')
     terminate <- TRUE
   }
+  if (length(which(dependent[1]==names(data)))==0){
+    missing_arguments <- append(missing_arguments,'\n  dependent (column name misspecified)')
+    terminate <- TRUE
+  }else if (length(which(dependent[2]==unique(data[,which(names(data)==dependent[1])])))==0){
+    missing_arguments <- append(missing_arguments,'\n  dependent (value misspecified)')
+    terminate <- TRUE
+  }
   if (missing(matchColumns)){
     missing_arguments <- append(missing_arguments,'\n  matchColumns')
+    terminate <- TRUE
+  }
+  if (length(unlist(lapply(1:length(matchColumns),function(x) which(matchColumns[x]==names(data)))))!=length(matchColumns)){
+    missing_arguments <- append(missing_arguments,'\n  matchColumns (column name(s) misspecified)')
     terminate <- TRUE
   }
   if (!is.data.frame(data)){
     missing_arguments <- append(missing_arguments,'\n  data')
     terminate <- TRUE
   }
+  if (length(unique(names(data)))!=length(names(data))){
+    missing_arguments <- append(missing_arguments,'\n  data (column names must be unique)')
+    terminate <- TRUE
+  }
   datecheck <- try(as.Date(data$timestamp, format= "%Y-%m-%d %H:%M:%S"))
-  if(any(class(datecheck) == "try-error" || is.na(datecheck))){
+  if (any(class(datecheck) == "try-error" || is.na(datecheck))){
     missing_arguments <- append(missing_arguments,'\n  timestamp (date format must be "YYYY-MM-DD hh:mm:ss)')
     terminate <- TRUE
   }
@@ -99,9 +128,7 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     if (deleteSUTVA){
       wakes <- subset(wakes,(wakes$SO_pre==0 & wakes$MO_pre==0))
     }
-    cat('Estimating causal effect on matched data...')
     matchedwake <- slideWakeMatch(wakes, alpha1, matchColumns, estimation, weighted, estimationControls, TCM, match.default, ...)
-    cat('                               [OK]\n')
     if (!match.default){
       cat("ATTENTION: match.default set to FALSE, data was not matched!\n")
     }
@@ -210,7 +237,91 @@ print.matchedwake <- function(x, ...){
   print(summary(x))
 }
 
+slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls, memory){
+  data <- data[order(data$timestamp),] 
+  row.names(data)<-NULL
+  datatype<-as.character(lapply(1:length(data),function(x) class(data[,x])))
+  treatmentinput<-treatment
+  treatmentinput[1]<-as.character(which(treatment[1]==names(data)))
+  controlinput<-control
+  controlinput[1]<-as.character(which(control[1]==names(data)))
+  depvarinput<-dependent
+  depvarinput[1]<-as.character(which(dependent[1]==names(data)))
+  wakeparams<-array(0,4)
+  wakeparams[1]<-which('lat'==names(data))
+  wakeparams[2]<-which('lon'==names(data))
+  wakeparams[3]<-which('timestamp'==names(data))
+  wakeparams<-as.character(wakeparams)
+  wakeparams[4]<-t_unit
+  datainput<-as.matrix(data)
+  mode(datainput)<-'character'
+  if (t_unit=='days'){
+    data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
+    data$timestamp <- format(data$timestamp,"%Y-%m-%d 00:00:00")
+  }
+  if (t_unit=='hours'){
+    data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
+    data$timestamp <- format(data$timestamp,"%Y-%m-%d %H:00:00")
+  }
+  if (t_unit=='mins'){
+    data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
+    data$timestamp <- format(data$timestamp,"%Y-%m-%d %H:%M:00")
+  }
+  wake_events<-subset(data, data[,c(treatment[1])]==treatment[2])
+  wake_events<-rbind(wake_events,subset(data, data[,c(control[1])]==control[2]))
+  wake_events[wake_events[,c(treatment[1])]==treatment[2],c(treatmentinput[1])]<-'1'
+  wake_events[wake_events[,c(control[1])]==control[2],c(treatmentinput[1])]<-'0'
+  wakeindex<-cbind(row.names(wake_events),wake_events[,c(treatmentinput[1])])
+  wakeindex<- wakeindex[order(as.numeric(wakeindex[,1])), ]
+  timevarinput <- as.character(seq(t_window[1],t_window[2],length=(t_window[2]-t_window[1])/t_window[3]+1))
+  spatvarinput <- as.character(seq(spat_window[1],spat_window[2],length=(spat_window[2]-spat_window[1])/spat_window[3]+1))
+  if (length(estimationControls) > 0){
+    matchColums <- c(matchColumns,estimationControls)
+  }
+  matchCol <- as.character(lapply(matchColumns,function(x) which(x==names(data))))
+  directory <- getwd()
+  cat(paste('Initializing JVM (',memory,'GB memory)...',sep=""))
+  .jinit(parameters=paste("-Xmx",memory,"g",sep=""),force.init = TRUE)
+  javatimevarinput <- .jcast(.jarray(timevarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
+  javaspatvarinput <- .jcast(.jarray(spatvarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
+  javamatchCol <- .jcast(.jarray(matchCol,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
+  javadata<-.jcast(.jarray(datainput,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")
+  javawakeindex<-.jcast(.jarray(wakeindex,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")  
+  javadirectory <- .jcast(.jarray(directory,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
+  obj <- .jnew("WakeCounter")
+  if(memory<10){
+    cat('                                          [OK]\n')
+  }else{
+    cat('                                         [OK]\n')
+  }
+  out <- .jcall(obj,"[[Ljava/lang/String;","wakeCounting", javatimevarinput, javaspatvarinput, javadata, javawakeindex, wakeparams, treatmentinput, controlinput, depvarinput, javamatchCol, javadirectory, simplify = TRUE)
+  wakes<-as.data.frame(out)
+  names(wakes) <- c("eventID","t_window", "spat_window", "treatment","dependent_pre", "dependent_trend", "SO_pre", "MO_pre", "dependent_post", "SO_post", "MO_post", matchColumns)
+  wakesoutput<-subset(wakes,wakes$t_window!="NaN")
+  row.names(wakesoutput)<-NULL
+  cat('[OK]\n')
+  if (length(wakesoutput[,1])!=length(wakes[,1])){
+    cat('WARNING: Some wakes were incomplete and had to be disregarded; please see matchedwake_log.txt for details.\n')  
+  }
+  dataformat<-c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
+  matchCol<-as.numeric(matchCol)
+  dataformat<-c(dataformat,datatype[matchCol])
+  for (row in 1:length(dataformat)){
+    if (dataformat[row]=="numeric" || dataformat[row]=="integer"){
+      wakesoutput[,row] <- as.numeric(as.character(wakesoutput[,row]))
+    }
+    if (dataformat[row]=="factor"){
+      wakesoutput[,row] <- as.factor(as.character(wakesoutput[,row]))
+    }
+    if (dataformat[row]=="character"){
+      wakesoutput[,row] <- as.character(wakesoutput[,row])
+    }
+  }
+  return(wakesoutput)
+}
+
 slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, estimationControls, TCM, match.default, ...){
+  cat('Matching observations and estimating causal effect....')
   t_window <- spat_window <- NULL 
   ceminputs <- list(...)
   terms <- which(c("cem.baseline.group","cem.datalist","cem.cutpoints","cem.grouping","cem.eval.imbalance","cem.k2k","cem.method","cem.mpower","cem.L1.breaks","cem.L1.grouping","cem.verbose","cem.keep.all") %in% names(ceminputs)) 
@@ -277,8 +388,32 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
     matchColumns <- c(matchColumns,"dependent_trend")
   }
   cem_cols <- c(matchColumns, "treatment", "dependent_post", "dependent_pre", estimationControls)
+  progressvar <- length(spat_windows)*length(t_windows)
+  varcounter <- 1
+  progresscounter <- 1
   for (space in seq(spat_windows[1],spat_windows[length(spat_windows)],spat_windows[2] - spat_windows[1])){
     for (time in seq(t_windows[1],t_windows[length(t_windows)],t_windows[2] - t_windows[1])){
+      if (progressvar<5){
+        if (varcounter %% floor(progressvar/2)==0 & progresscounter<=2){
+          cat("..........")
+          progresscounter <- progresscounter + 1
+        }
+      }else if (progressvar<10){
+        if (varcounter %% floor(progressvar/5)==0 & progresscounter<=5){
+          cat("....")
+          progresscounter <- progresscounter + 1
+        }
+      }else if (progressvar<20){
+        if (varcounter %% floor(progressvar/10)==0 & progresscounter<=10){
+          cat("..")
+          progresscounter <- progresscounter + 1
+        }
+      }else{
+        if (varcounter %% floor(progressvar/20)==0 & progresscounter<=20){
+          cat(".")
+          progresscounter <- progresscounter + 1
+        }
+      }
       match_data <- subset(wakes,t_window == time & spat_window == space)
       matching$control_pre[matching$t_window == time & matching$spat_window == space] <- length(which(match_data$treatment == 0)) 
       matching$treatment_pre[matching$t_window == time & matching$spat_window == space] <- length(which(match_data$treatment == 1))
@@ -401,97 +536,13 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
       spills_sub <- subset(wakes, (wakes$t_window==time & wakes$spat_window==space & (wakes$MO_pre>0 | wakes$MO_post>0)))                                              
       spills <- round(nrow(spills_sub)/nrow(sub),3)
       SUTVA <- rbind(SUTVA,c(time,space,doubles_pre,doubles_post,doubles,spills_pre,spills_post,spills))
+      varcounter <- varcounter + 1
     }
   }
   names(SUTVA) <- c("t_window","spat_window","SO_pre","SO_post","SO","MO_pre","MO_post","MO")
   SUTVA <- SUTVA[order(SUTVA$t_window),]
   row.names(SUTVA) <- NULL
   matchedwake <- list (estimates = estimates, matching = matching, SUTVA = SUTVA, wakes = wakes)
+  cat('[OK]\n')
   return(matchedwake)  
-}
-
-slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls, memory){
-  data <- data[order(data$timestamp),] 
-  row.names(data)<-NULL
-  datatype<-as.character(lapply(1:length(data),function(x) class(data[,x])))
-  treatmentinput<-treatment
-  treatmentinput[1]<-as.character(grep(treatment[1],names(data)))
-  controlinput<-control
-  controlinput[1]<-as.character(grep(control[1],names(data)))
-  depvarinput<-dependent
-  depvarinput[1]<-as.character(grep(dependent[1],names(data)))
-  wakeparams<-array(0,4)
-  wakeparams[1]<-grep('lat',names(data))
-  wakeparams[2]<-grep('long',names(data))
-  wakeparams[3]<-grep('timestamp',names(data))
-  wakeparams<-as.character(wakeparams)
-  wakeparams[4]<-t_unit
-  datainput<-as.matrix(data)
-  mode(datainput)<-'character'
-  if (t_unit=='days'){
-    data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
-    data$timestamp <- format(data$timestamp,"%Y-%m-%d 00:00:00")
-  }
-  if (t_unit=='hours'){
-    data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
-    data$timestamp <- format(data$timestamp,"%Y-%m-%d %H:00:00")
-  }
-  if (t_unit=='mins'){
-    data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
-    data$timestamp <- format(data$timestamp,"%Y-%m-%d %H:%M:00")
-  }
-  wake_events<-subset(data, data[,c(treatment[1])]==treatment[2])
-  wake_events<-rbind(wake_events,subset(data, data[,c(control[1])]==control[2]))
-  wake_events[wake_events[,c(treatment[1])]==treatment[2],c(treatmentinput[1])]<-'1'
-  wake_events[wake_events[,c(control[1])]==control[2],c(treatmentinput[1])]<-'0'
-  wakeindex<-cbind(row.names(wake_events),wake_events[,c(treatmentinput[1])])
-  wakeindex<- wakeindex[order(as.numeric(wakeindex[,1])), ]
-  timevarinput <- as.character(seq(t_window[1],t_window[2],length=(t_window[2]-t_window[1])/t_window[3]+1))
-  spatvarinput <- as.character(seq(spat_window[1],spat_window[2],length=(spat_window[2]-spat_window[1])/spat_window[3]+1))
-  if (length(estimationControls) > 0){
-    matchColums <- c(matchColumns,estimationControls)
-  }
-  matchCol <- as.character(lapply(matchColumns,function(x) grep(x,names(data))))
-  directory <- getwd()
-  cat(paste('Initializing JVM (',memory,'GB memory)...',sep=""))
-  .jinit(parameters=paste("-Xmx",memory,"g",sep=""),force.init = TRUE)
-  javatimevarinput <- .jcast(.jarray(timevarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
-  javaspatvarinput <- .jcast(.jarray(spatvarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
-  javamatchCol <- .jcast(.jarray(matchCol,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
-  javadata<-.jcast(.jarray(datainput,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")
-  javawakeindex<-.jcast(.jarray(wakeindex,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")  
-  javadirectory <- .jcast(.jarray(directory,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
-  obj <- .jnew("WakeCounter")
-  if(memory<10){
-    cat('                                          [OK]\n')
-  }else{
-    cat('                                         [OK]\n')
-  }
-  cat('Iterating through sliding windows and generating wakes...')
-  out <- .jcall(obj,"[[Ljava/lang/String;","wakeCounting", javatimevarinput, javaspatvarinput, javadata, javawakeindex, wakeparams, treatmentinput, controlinput, depvarinput, javamatchCol, javadirectory)
-  wakes <- lapply(1:length(out),function(x) .jevalArray(out[[x]],simplify=TRUE))
-  wakes<-do.call(rbind, wakes)
-  wakes<-as.data.frame(wakes)
-  names(wakes) <- c("eventID","t_window", "spat_window", "treatment","dependent_pre", "dependent_trend", "SO_pre", "MO_pre", "dependent_post", "SO_post", "MO_post", matchColumns)
-  wakesoutput<-subset(wakes,wakes$t_window!="NaN")
-  row.names(wakesoutput)<-NULL
-  cat('                 [OK]\n')
-  if (length(wakesoutput[,1])!=length(wakes[,1])){
-    cat('WARNING: Some wakes were incomplete and had to be disregarded; please see matchedwake_log.txt for details.\n')  
-  }
-  dataformat<-c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
-  matchCol<-as.numeric(matchCol)
-  dataformat<-c(dataformat,datatype[matchCol])
-  for (row in 1:length(dataformat)){
-    if (dataformat[row]=="numeric" || dataformat[row]=="integer"){
-      wakesoutput[,row] <- as.numeric(as.character(wakesoutput[,row]))
-    }
-    if (dataformat[row]=="factor"){
-      wakesoutput[,row] <- as.factor(as.character(wakesoutput[,row]))
-    }
-    if (dataformat[row]=="character"){
-      wakesoutput[,row] <- as.character(wakesoutput[,row])
-    }
-  }
-  return(wakesoutput)
 }

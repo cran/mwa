@@ -70,7 +70,7 @@ matchedwake(data, t_window, spat_window, treatment, control,
 }
 }
 \details{
-  The method expects \code{data} to be a \code{data.frame}. Dates must be given in column \kbd{timestamp} and formatted as a date string with format \kbd{"YYYY-MM-DD hh:mm:ss"}. Alternatively, a POSIX Date can be specified using the same format. \code{data} must also contain two entries called \code{lat} and \code{long} for the geo location of each entry.
+  The method expects \code{data} to be a \code{data.frame}. Dates must be given in column \kbd{timestamp} and formatted as a date string with format \kbd{"YYYY-MM-DD hh:mm:ss"}. Alternatively, a POSIX Date can be specified using the same format. \code{data} must also contain two entries called \code{lat} and \code{lon} for the geo location of each entry.
 
   \code{t_window} specifies the minimal and maximal temporal window sizes and corresponding steps used in the iteration. Required syntax is \kbd{c(min_window, max_window, step_size)} with \code{step_size} in units of \code{t_unit}. The spatial window \code{spat_window} is specified in the same way with kilometers as units.
 
