@@ -5,10 +5,12 @@ auxiliary function to iterate through sliding spatiotemporal windows
 }
 \description{
 Method iterates through all spatial and temporal window sizes specified and counts dependent events with a given spatial window and for a given temporal window (symmetrically in forward and backward direction in time). For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
+
+\bold{IMPORTANT}: The size of the Java heap space has to be set before \bold{first} calling the package via \code{library(mwa)} since JVM size cannot change once it has been initialized. This also implies that R has to be restarted if another library was already using a JVM in order for the heap space option to have any effect. To set the heap space to 1 GB, for example, use \code{options(java.parameters = "-Xmx1g")} (512 MB is the default size).
 }
 \usage{
 slidingWake(data, t_unit, t_window, spat_window, treatment, control,
-            dependent, matchColumns, estimationControls, memory)
+            dependent, matchColumns, estimationControls)
 }
 \arguments{
   \item{data}{
@@ -37,9 +39,6 @@ slidingWake(data, t_unit, t_window, spat_window, treatment, control,
 }
   \item{estimationControls}{
   vector of Strings indicating additional control dimensions to be included in the estimation.
-}
-  \item{memory}{
-  size of the Java heap space for the counting procedure in gigabytes.
 }
 }
 \details{

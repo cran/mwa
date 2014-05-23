@@ -1,4 +1,4 @@
-matchedwake <- function(data, t_window, spat_window, treatment, control, dependent, matchColumns, t_unit = "days", estimation = "lm", weighted = FALSE, estimationControls = c(), TCM = FALSE, deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1, memory = 1, match.default = TRUE, ...){
+matchedwake <- function(data, t_window, spat_window, treatment, control, dependent, matchColumns, t_unit = "days", estimation = "lm", weighted = FALSE, estimationControls = c(), TCM = FALSE, deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1, match.default = TRUE, ...){
   missing_arguments <- c()
   terminate <- FALSE
   if(missing(data)){   
@@ -124,15 +124,15 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     call <- match.call()
     cat('MWA: Analyzing causal effects in spatiotemporal event data.\n\nPlease always cite:\nSchutte, S., Donnay, K. (2014). "Matched wake analysis: Finding causal relationships in spatiotemporal event data." Political Geography 41:1-10.\n\n\nATTENTION: Depending on the size of the dataset and the number of spatial and temporal windows, iterations can take some time!\n\n')
     cat(paste('matchedwake(data = ', call$data,', t_window = ', call$t_window,', spat_window = ', call$spat_window,', ...):\n', sep = "")) 
-    wakes <- slidingWake(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls, memory)
+    wakes <- slidingWake(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls)
     if (deleteSUTVA){
       wakes <- subset(wakes,(wakes$SO_pre==0 & wakes$MO_pre==0))
     }
     matchedwake <- slideWakeMatch(wakes, alpha1, matchColumns, estimation, weighted, estimationControls, TCM, match.default, ...)
     if (!match.default){
-      cat("ATTENTION: match.default set to FALSE, data was not matched!\n")
+      message("ATTENTION: match.default set to FALSE, data was not matched!")
     }
-    matchedwake$parameters <- list(t_window = t_window, spat_window = spat_window, treatment = treatment, control = control, dependent = dependent, matchColumns = matchColumns, t_unit = t_unit, estimation = estimation, estimationControls = estimationControls, TCM = TCM, deleteSUTVA = deleteSUTVA, alpha1 = alpha1, alpha2 = alpha2, memory = memory, match.default = match.default, ...)
+    matchedwake$parameters <- list(t_window = t_window, spat_window = spat_window, treatment = treatment, control = control, dependent = dependent, matchColumns = matchColumns, t_unit = t_unit, estimation = estimation, estimationControls = estimationControls, TCM = TCM, deleteSUTVA = deleteSUTVA, alpha1 = alpha1, alpha2 = alpha2, match.default = match.default, ...)
     matchedwake$call <- call    
     class(matchedwake) <- "matchedwake"
     cat('Analysis complete!\n\nUse summary() for an overview and plot() to illustrate the results graphically.\n')
@@ -237,7 +237,7 @@ print.matchedwake <- function(x, ...){
   print(summary(x))
 }
 
-slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls, memory){
+slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control, dependent, matchColumns, estimationControls){
   data <- data[order(data$timestamp),] 
   row.names(data)<-NULL
   datatype<-as.character(lapply(1:length(data),function(x) class(data[,x])))
@@ -279,29 +279,41 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
     matchColums <- c(matchColumns,estimationControls)
   }
   matchCol <- as.character(lapply(matchColumns,function(x) which(x==names(data))))
+  mem <- .jcall("WakeCounter","Ljava/lang/String;","heapspace",simplify = TRUE)
+  memory <- round(as.numeric(mem)/1073741824,1)
+  cat(paste('Using JVM with ',memory,' GB heap space...\n',sep=""))
+  options <- options()
+  meminput <- unlist(strsplit(options$java.parameters,"-Xmx"))[2]
+  meminputMB <- unlist(strsplit(meminput,"m"))[1]
+  meminputGB <- unlist(strsplit(meminput,"g"))[1]
+  memcheck <- FALSE
+  if (nchar(meminputMB)==nchar(meminput)-1){
+    if (as.numeric(meminputMB)!=memory*1024){
+      memcheck <- TRUE
+    }
+  }else{
+    if (as.numeric(meminputGB)!=memory){
+      memcheck <- TRUE
+    }
+  }
+  if (memcheck){
+    message(paste('WARNING: Could not run JVM with heap space set in options(java.parameters = ',options$java.parameters,').\n         Restarting the session and setting java.parameters before loading the mwa package will solve this problem!',sep=""))
+  }
   directory <- getwd()
-  cat(paste('Initializing JVM (',memory,'GB memory)...',sep=""))
-  .jinit(parameters=paste("-Xmx",memory,"g",sep=""),force.init = TRUE)
   javatimevarinput <- .jcast(.jarray(timevarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
   javaspatvarinput <- .jcast(.jarray(spatvarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
   javamatchCol <- .jcast(.jarray(matchCol,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
   javadata<-.jcast(.jarray(datainput,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")
   javawakeindex<-.jcast(.jarray(wakeindex,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")  
   javadirectory <- .jcast(.jarray(directory,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
-  obj <- .jnew("WakeCounter")
-  if(memory<10){
-    cat('                                          [OK]\n')
-  }else{
-    cat('                                         [OK]\n')
-  }
-  out <- .jcall(obj,"[[Ljava/lang/String;","wakeCounting", javatimevarinput, javaspatvarinput, javadata, javawakeindex, wakeparams, treatmentinput, controlinput, depvarinput, javamatchCol, javadirectory, simplify = TRUE)
+  out <- .jcall("WakeCounter","[[Ljava/lang/String;","wakeCounting", javatimevarinput, javaspatvarinput, javadata, javawakeindex, wakeparams, treatmentinput, controlinput, depvarinput, javamatchCol, javadirectory, simplify = TRUE)
   wakes<-as.data.frame(out)
   names(wakes) <- c("eventID","t_window", "spat_window", "treatment","dependent_pre", "dependent_trend", "SO_pre", "MO_pre", "dependent_post", "SO_post", "MO_post", matchColumns)
   wakesoutput<-subset(wakes,wakes$t_window!="NaN")
   row.names(wakesoutput)<-NULL
   cat('[OK]\n')
   if (length(wakesoutput[,1])!=length(wakes[,1])){
-    cat('WARNING: Some wakes were incomplete and had to be disregarded; please see matchedwake_log.txt for details.\n')  
+    message('WARNING: Some wakes were incomplete and had to be disregarded.\n         Please check matchedwake_log.txt for details!')  
   }
   dataformat<-c("numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric","numeric")
   matchCol<-as.numeric(matchCol)

@@ -9,7 +9,9 @@ MWA analyzes spatially and temporally referenced data. Specific types of events 
 
 }
 \details{
-The full functionality of MWA is given through \code{\link{matchedwake}}, which relies on a small set of auxiliary methods. Note that \code{print()}, \code{summary()} and \code{plot()} commands are overloaded to return outputs specific to class \code{matchedwake}.
+The full functionality of MWA is given through \code{\link{matchedwake}}, which relies on a small set of auxiliary methods. Note that \code{print()}, \code{summary()} and \code{plot()} commands are overloaded to return outputs specific to class \code{matchedwake}. For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
+
+\bold{IMPORTANT}: The size of the Java heap space has to be set before \bold{first} calling the package via \code{library(mwa)} since JVM size cannot change once it has been initialized. This also implies that R has to be restarted if another library was already using a JVM in order for the heap space option to have any effect. To set the heap space to 1 GB, for example, use \code{options(java.parameters = "-Xmx1g")} (512 MB is the default size).
 }
 \author{
 Sebastian Schutte and Karsten Donnay
@@ -45,14 +47,11 @@ weighted <- TRUE
 t_unit <- "days" 
 # - match on counts of previous treatment and control events
 TCM <- TRUE
-# - maximal Java heap space to be used in the analysis
-memory <- 1 # in GB
 
 \dontrun{
 # Execute method:
 results <- matchedwake(mwa_data, t_window, spat_window, treatment, control, dependent,
-                       matchColumns, weighted = weighted, t_unit = t_unit, TCM = TCM,
-                       memory = memory)
+                       matchColumns, weighted = weighted, t_unit = t_unit, TCM = TCM)
 
 # Plot results:
 plot(results)

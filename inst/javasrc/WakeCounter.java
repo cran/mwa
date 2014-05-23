@@ -408,4 +408,16 @@ class WakeCounter {
 	    System.err.println("Error: " + e.getMessage());
 	}
     }
+    
+     /**
+     * Returns heap space of running JVM
+     * 
+     * @Author: Karsten Donnay, ETH Zurich 2014
+     * 
+     */
+     public static String heapspace(){
+	 String memory = Long.toString(Runtime.getRuntime().maxMemory());
+	 return memory;
+     }
+
 }

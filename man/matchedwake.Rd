@@ -4,13 +4,15 @@
 estimate treatment effect for sliding spatiotemporal windows
 }
 \description{
-	This function performs the MWA analysis consisting of two steps: counts for previous and posterior events are established for different spatial and temporal offsets from treatment and control events. After that, the treatment effect is estimated in a difference-in-differences regression design.   
+This function performs the MWA analysis consisting of two steps: counts for previous and posterior events are established for different spatial and temporal offsets from treatment and control events. After that, the treatment effect is estimated in a difference-in-differences regression design. For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
+
+\bold{IMPORTANT}: The size of the Java heap space has to be set before \bold{first} calling the package via \code{library(mwa)} since JVM size cannot change once it has been initialized. This also implies that R has to be restarted if another library was already using a JVM in order for the heap space option to have any effect. To set the heap space to 1 GB, for example, use \code{options(java.parameters = "-Xmx1g")} (512 MB is the default size).
 }
 \usage{
 matchedwake(data, t_window, spat_window, treatment, control,
             dependent, matchColumns, t_unit = "days", estimation = "lm",
             weighted = FALSE, estimationControls = c(), TCM = FALSE,
-            deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1, memory = 1,
+            deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1,
             match.default = TRUE, ...)
 }
 \arguments{
@@ -58,9 +60,6 @@ matchedwake(data, t_window, spat_window, treatment, control,
 }
   \item{alpha2}{
   second significance level used for the analysis and plots. Default = \kbd{0.1}.
-}
-  \item{memory}{
-  size of the Java heap space for the counting procedure in gigabytes. Default = \kbd{1}.
 }
   \item{match.default}{
   Boolean to select whether observations are matched using \code{cem}. Default = \kbd{TRUE}.
@@ -140,14 +139,11 @@ weighted <- TRUE
 t_unit <- "days" 
 # - match on counts of previous treatment and control events
 TCM <- TRUE
-# - maximal Java heap space to be used in the analysis
-memory <- 1 # in GB
 
 \dontrun{
 # Execute method:
 results <- matchedwake(mwa_data, t_window, spat_window, treatment, control, dependent,
-                       matchColumns, weighted = weighted, t_unit = t_unit, TCM = TCM,
-                       memory = memory)
+                       matchColumns, weighted = weighted, t_unit = t_unit, TCM = TCM)
 
 # Plot results:
 plot(results)
