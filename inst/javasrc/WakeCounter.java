@@ -108,7 +108,7 @@ class WakeCounter {
 	    timescaling = 24*60*60*1000;
 	}	
 	SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-	if (data[0][0].length() > 10){
+	if (data[0][timeindex].length() > 10){
 	    format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	}
 	Date[] date = new Date[events];

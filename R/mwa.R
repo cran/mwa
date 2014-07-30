@@ -87,17 +87,29 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     missing_arguments <- append(missing_arguments,'\n  t_window (Note: minimum time window size is 2 in order to calculate a trend)')
     terminate <- TRUE
   }
-  if (!(abs((t_window[2]-t_window[1])/t_window[3]) - round((t_window[2]-t_window[1])/t_window[3])  < .Machine$double.eps^0.5)){
-    missing_arguments <- append(missing_arguments,'\n  t_window (non-integer division of interval)')
+  if (t_window[1]!=t_window[2] & t_window[3]==0){
+    missing_arguments <- append(missing_arguments,'\n  t_window')
     terminate <- TRUE
+  }
+  if (t_window[3]>0){
+    if(!(abs((t_window[2]-t_window[1])/t_window[3]) - round((t_window[2]-t_window[1])/t_window[3])  < .Machine$double.eps^0.5)){
+      missing_arguments <- append(missing_arguments,'\n  t_window (non-integer division of interval)')
+      terminate <- TRUE
+    }
   }
   if (!is.numeric(spat_window) || length(spat_window)!=3){
     missing_arguments <- append(missing_arguments,'\n  spat_window')
     terminate <- TRUE
   }
-  if (!(abs((spat_window[2]-spat_window[1])/spat_window[3]) - round((spat_window[2]-spat_window[1])/spat_window[3])  < .Machine$double.eps^0.5)){
-    missing_arguments <- append(missing_arguments,'\n  spat_window (non-integer division of interval)')
+  if (spat_window[1]!=spat_window[2] & spat_window[3]==0){
+    missing_arguments <- append(missing_arguments,'\n  spat_window')
     terminate <- TRUE
+  }
+  if (spat_window[3]>0){
+    if (!(abs((spat_window[2]-spat_window[1])/spat_window[3]) - round((spat_window[2]-spat_window[1])/spat_window[3])  < .Machine$double.eps^0.5)){
+      missing_arguments <- append(missing_arguments,'\n  spat_window (non-integer division of interval)')
+      terminate <- TRUE
+    }
   }
   if (!is.character(treatment[1]) || length(treatment)!=2){
     missing_arguments <- append(missing_arguments,'\n  treatment')
@@ -204,19 +216,43 @@ plot.matchedwake <- function(x, ...){
     eswcplot [x,1] <- eswcplot [x,2]
     eswcplot [x,length(yAxis)+2] <- eswcplot [x,length(yAxis)+1]
   }
-  filled.contour(x = seq(-1/(length(xAxis)-1),1+1/(length(xAxis)-1),length.out=length(xAxis)+2),y = seq(-1/(length(yAxis)-1),1+1/(length(yAxis)-1),length.out=length(yAxis)+2),eswcplot,xlab = "Spatial window in kilometers",
+  if (length(xAxis)==1){
+    xvals <- c(0,0.5,1)
+    xlims <- c(0,1)
+    xat <- 0.5
+    xhalfRectSize <- 1
+    xstepsize <- 1 
+  }else{
+    xvals <- seq(-1/(length(xAxis)-1),1+1/(length(xAxis)-1),length.out=length(xAxis)+2)
+    xlims <- c(-1/(length(xAxis)-1)/2,1+1/(length(xAxis)-1)/2)
+    xat <- seq(0,1,by=1/(length(xAxis)-1))
+    xhalfRectSize <- (1 / (length(xAxis) -1)) / 2
+    xstepsize <- 1 / (length(xAxis) - 1)
+  }
+  if (length(yAxis)==1){
+    yvals <- c(0,0.5,1)
+    ylims <- c(0,1)
+    yat <- 0.5
+    yhalfRectSize <- 1
+    ystepsize <- 1 
+  }else{
+    yvals <- seq(-1/(length(yAxis)-1),1+1/(length(yAxis)-1),length.out=length(yAxis)+2)
+    ylims <- c(-1/(length(yAxis)-1)/2,1+1/(length(yAxis)-1)/2)
+    yat <- seq(0,1,by=1/(length(yAxis)-1))
+    yhalfRectSize <- (1 / (length(yAxis) -1)) / 2
+    ystepsize <- 1 / (length(yAxis) - 1)
+  }
+  
+  
+  filled.contour(x = xvals, y = yvals,eswcplot,xlab = "Spatial window in kilometers",
                  ylab=paste("Temporal window in ",t_unit,sep=""),
                  nlevels = 20,
                  color.palette = gray.colors,
-                 xlim = c(-1/(length(xAxis)-1)/2,1+1/(length(xAxis)-1)/2),
-                 ylim = c(-1/(length(yAxis)-1)/2,1+1/(length(yAxis)-1)/2),
-                 plot.axes= {
-                   axis(1,labels=xAxis,at=seq(0,1,by=1/(length(xAxis)-1)))
-                   axis(2,at=seq(0,1,by=1/(length(yAxis)-1)),labels=yAxis)
-                   yhalfRectSize <- (1 / (length(yAxis) -1)) / 2
-                   xhalfRectSize <- (1 / (length(xAxis) -1)) / 2
-                   ystepsize <- 1 / (length(yAxis) - 1)
-                   xstepsize <- 1 / (length(xAxis) - 1)
+                 xlim = xlims,
+                 ylim = ylims,
+                 plot.axes = {
+                   axis(1,labels=xAxis,at=xat)
+                   axis(2,at=yat,labels=yAxis)
                    for (y in 1:length(yAxis)){
                      for(x in 1:length(xAxis)){
                        if (is.na(pswcplot[x+1,y+1]) | is.nan(pswcplot[x+1,y+1]) | pswcplot[x+1,y+1] > alpha2){
@@ -273,8 +309,16 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
   wake_events[wake_events[,c(control[1])]==control[2],c(treatmentinput[1])]<-'0'
   wakeindex<-cbind(row.names(wake_events),wake_events[,c(treatmentinput[1])])
   wakeindex<- wakeindex[order(as.numeric(wakeindex[,1])), ]
-  timevarinput <- as.character(seq(t_window[1],t_window[2],length=(t_window[2]-t_window[1])/t_window[3]+1))
-  spatvarinput <- as.character(seq(spat_window[1],spat_window[2],length=(spat_window[2]-spat_window[1])/spat_window[3]+1))
+  if(t_window[1]==t_window[2]){
+    timevarinput <- as.character(t_window[1]) 
+  }else{
+    timevarinput <- as.character(seq(t_window[1],t_window[2],length=(t_window[2]-t_window[1])/t_window[3]+1))
+  }
+  if(spat_window[1]==spat_window[2]){
+    spatvarinput <- as.character(spat_window[1]) 
+  }else{
+    spatvarinput <- as.character(seq(spat_window[1],spat_window[2],length=(spat_window[2]-spat_window[1])/spat_window[3]+1))
+  }
   if (length(estimationControls) > 0){
     matchColums <- c(matchColumns,estimationControls)
   }
@@ -297,7 +341,7 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
     }
   }
   if (memcheck){
-    message(paste('WARNING: Could not run JVM with heap space set in options(java.parameters = ',options$java.parameters,').\n         Restarting the session and setting java.parameters before loading the mwa package will solve this problem!',sep=""))
+    message(paste('WARNING: Could not run JVM with heap space set in options(java.parameters = "',options$java.parameters,'").\n         Restarting the session and setting java.parameters before loading the mwa package will solve this problem!',sep=""))
   }
   directory <- getwd()
   javatimevarinput <- .jcast(.jarray(timevarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
@@ -374,8 +418,8 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
     formula <- paste(formula," +",form_unlist[length(form_unlist)])
   }
   nterms <- length(unlist(strsplit(formula,split="\\+")))
-  t_windows <- sort(unique(wakes$t_window))
-  spat_windows <- sort(unique(wakes$spat_window))
+  t_windows <- as.numeric(as.character(sort(unique(wakes$t_window))))
+  spat_windows <- as.numeric(as.character(sort(unique(wakes$spat_window))))
   if (estimation == "lm"){
     estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 5))
     names(estimates) <- c("t_window","spat_window","estimate","pvalue","adj.r.squared")
@@ -403,9 +447,21 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
   progressvar <- length(spat_windows)*length(t_windows)
   varcounter <- 1
   progresscounter <- 1
-  for (space in seq(spat_windows[1],spat_windows[length(spat_windows)],spat_windows[2] - spat_windows[1])){
-    for (time in seq(t_windows[1],t_windows[length(t_windows)],t_windows[2] - t_windows[1])){
-      if (progressvar<5){
+  if (length(spat_windows) == 1){
+    spat_iter <- spat_windows
+  }else{
+    spat_iter <- seq(spat_windows[1],spat_windows[length(spat_windows)],spat_windows[2]-spat_windows[1])
+  }
+  if (length(t_windows) == 1){
+    t_iter <- t_windows 
+  }else{
+    t_iter <- seq(t_windows[1],t_windows[length(t_windows)],t_windows[2]-t_windows[1])
+  }
+  for (space in spat_iter){
+    for (time in t_iter){
+      if (progressvar<2){
+          cat("....................")
+      }else if (progressvar<5){
         if (varcounter %% floor(progressvar/2)==0 & progresscounter<=2){
           cat("..........")
           progresscounter <- progresscounter + 1
