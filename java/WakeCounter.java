@@ -165,7 +165,7 @@ class WakeCounter {
 	boolean missing_wake_flag = false;
 	int removedwakes = 0;
 	int varcounter = 0;
-	int progresscounter = variations/20;
+	double progresscounter = ((double)variations)/20;
 	System.out.printf("Iterating through sliding windows and generating wakes");
 	for (int spatialwindow=0; spatialwindow<spatvar.length; spatialwindow++){
 	    for (int timewindow=0; timewindow<timevar.length; timewindow++){
@@ -318,7 +318,7 @@ class WakeCounter {
 		    varcounter++;
 		    if (varcounter>=progresscounter){
 		   	System.out.printf(".");
-			progresscounter = progresscounter + variations/20;
+			progresscounter = progresscounter + ((double)variations)/20;
 		    }
 		}
 	    }

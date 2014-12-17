@@ -303,11 +303,11 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
     data$timestamp <- strptime(data$timestamp, "%Y-%m-%d %H:%M:%S")
     data$timestamp <- format(data$timestamp,"%Y-%m-%d %H:%M:00")
   }
-  wake_events<-subset(data, data[,c(treatment[1])]==treatment[2])
-  wake_events<-rbind(wake_events,subset(data, data[,c(control[1])]==control[2]))
-  wake_events[wake_events[,c(treatment[1])]==treatment[2],c(treatmentinput[1])]<-'1'
-  wake_events[wake_events[,c(control[1])]==control[2],c(treatmentinput[1])]<-'0'
-  wakeindex<-cbind(row.names(wake_events),wake_events[,c(treatmentinput[1])])
+  wake_treat<-row.names(data[data[,c(treatment[1])]==treatment[2],])
+  wake_contr<-row.names(data[data[,c(control[1])]==control[2],])
+  wake_events <- c(wake_treat,wake_contr)  
+  wake_boolean <- c(rep('1',length(wake_treat)), rep('0',length(wake_contr)))
+  wakeindex<-cbind(wake_events,wake_boolean)
   wakeindex<- wakeindex[order(as.numeric(wakeindex[,1])), ]
   if(t_window[1]==t_window[2]){
     timevarinput <- as.character(t_window[1]) 
@@ -341,7 +341,7 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
     }
   }
   if (memcheck){
-    message(paste('WARNING: Could not run JVM with heap space set in options(java.parameters = "',options$java.parameters,'").\n         Restarting the session and setting java.parameters before loading the mwa package will solve this problem!',sep=""))
+    message(paste('WARNING: Could not run JVM with heap space set in options(java.parameters = "',options$java.parameters,'").\n         Restarting the R session and setting java.parameters before loading the mwa package will solve this problem!',sep=""))
   }
   directory <- getwd()
   javatimevarinput <- .jcast(.jarray(timevarinput,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
@@ -349,7 +349,7 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
   javamatchCol <- .jcast(.jarray(matchCol,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
   javadata<-.jcast(.jarray(datainput,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")
   javawakeindex<-.jcast(.jarray(wakeindex,contents.class="[[Ljava/lang/String;",dispatch=TRUE),"[[Ljava/lang/String;")  
-  javadirectory <- .jcast(.jarray(directory,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")      
+  javadirectory <- .jcast(.jarray(directory,contents.class="[Ljava/lang/String;",dispatch=TRUE),"[Ljava/lang/String;")
   out <- .jcall("WakeCounter","[[Ljava/lang/String;","wakeCounting", javatimevarinput, javaspatvarinput, javadata, javawakeindex, wakeparams, treatmentinput, controlinput, depvarinput, javamatchCol, javadirectory, simplify = TRUE)
   wakes<-as.data.frame(out)
   names(wakes) <- c("eventID","t_window", "spat_window", "treatment","dependent_pre", "dependent_trend", "SO_pre", "MO_pre", "dependent_post", "SO_post", "MO_post", matchColumns)
