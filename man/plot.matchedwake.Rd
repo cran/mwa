@@ -1,7 +1,7 @@
 \name{plot.matchedwake}
 \alias{plot.matchedwake}
 \title{
-plot function for objects of class \code{matchedwake}
+Plot Function for Objects of Class \code{matchedwake}
 }
 \description{
 Overloads the default \code{plot()} for objects of class \code{matchedwake}. Returns a contour plot: The lighter the color the larger the estimated treatment effect. The corresponding standard errors are indicated by shading out some of the estimates: No shading corresponds to \eqn{p<alpha1} for the treatment effect in the diff-in-diffs analysis. Dotted lines indicate p-values between \code{alpha1} and \code{alpha2} and full lines indicate \eqn{p>alpha2}. The cells indicating effect size and significance level are arranged in a table where each field corresponds to one specific combination of spatial and temporal sizes.

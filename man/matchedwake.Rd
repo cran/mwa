@@ -1,10 +1,10 @@
 \name{matchedwake}
 \alias{matchedwake}
 \title{
-estimate treatment effect for sliding spatiotemporal windows
+Estimate Treatment Effect for Sliding Spatiotemporal Windows
 }
 \description{
-This function performs the MWA analysis consisting of two steps: counts for previous and posterior events are established for different spatial and temporal offsets from treatment and control events. After that, the treatment effect is estimated in a difference-in-differences regression design. For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
+This function performs the Matched Wake Analysis (mwa), which consists of two steps: counts for previous and posterior events are established for different spatial and temporal offsets from treatment and control events. After that, the treatment effect is estimated in a difference-in-differences regression design. For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
 
 \bold{IMPORTANT}: The size of the Java heap space has to be set before \bold{first} calling the package via \code{library(mwa)} since JVM size cannot change once it has been initialized. This also implies that R has to be restarted if another library was already using a JVM in order for the heap space option to have any effect. To set the heap space to 1 GB, for example, use \code{options(java.parameters = "-Xmx1g")} (512 MB is the default size).
 }
@@ -79,14 +79,14 @@ matchedwake(data, t_window, spat_window, treatment, control,
 
   The optional argument \code{t_unit} specifies the temporal resolution for which the analysis is to be conducted, one of either \kbd{"days"}, \kbd{"hours"}, \kbd{"mins"} or \kbd{"secs"}. If the time stamps provided in \code{data} are more precise than the resolution they are truncated accordingly. 
 
-  MWA estimates treatment effects using a diff-in-diffs regression design, i.e. \kbd{"dependent_post ~ dependent_pre + treatment"} (where ``pre'' and ``post'' refer to pre and post intervention). Three different methods can be chosen using \code{estimation}: a linear model (\kbd{"lm"}, \pkg{stats}), all models available through (\kbd{"att"}, \pkg{cem}) or a count dependent model (\kbd{"glm.nb"}, \pkg{MASS}). For regressions using \kbd{"lm"} or \kbd{"att"} \code{weighted} sets whether or not the regression is weighted by the number of treatment vs. control cases. Additional control variables can be specified via \code{estimationControls}. For example, if \kbd{estimationControls = c("covariate1")}, the package automatically modifies the estimation formula to \kbd{"dependent_post ~ dependent_pre + covariate1 + treatment"}.
+  \pkg{mwa} estimates treatment effects using a diff-in-diffs regression design, i.e. \kbd{"dependent_post ~ dependent_pre + treatment"} (where ``pre'' and ``post'' refer to pre and post intervention). Three different methods can be chosen using \code{estimation}: a linear model (\kbd{"lm"}, \pkg{stats}), all models available through (\kbd{"att"}, \pkg{cem}) or a count dependent model (\kbd{"glm.nb"}, \pkg{MASS}). For regressions using \kbd{"lm"} or \kbd{"att"} \code{weighted} sets whether or not the regression is weighted by the number of treatment vs. control cases. Additional control variables can be specified via \code{estimationControls}. For example, if \kbd{estimationControls = c("covariate1")}, the package automatically modifies the estimation formula to \kbd{"dependent_post ~ dependent_pre + covariate1 + treatment"}. In this case the output then also not only returns the estimate and p value for \kbd{treatment} but further returns the coefficients and p values for all additional control variables.
 
  The package supports full inheritance for optional arguments of the following methods: \code{\link{cem}} and \code{\link{att}} (\pkg{cem}), \code{\link{lm}} (\pkg{stats}), \code{\link{glm.nb}} (\pkg{MASS}). To guarantee unique inputs for each method, options have to entered into \code{matchedwake()} using a prefix that consists of the method name separated by ``.''. For example, in order for \code{\link{cem}} to return an exactly balanced dataset simply add \code{cem.k2k = TRUE} as optional argument.
 }
 \value{
   Returns an object of class \code{matchedwake}, which is a list of objects with the following slots:
    \item{estimates}{
-   \code{data.frame} with estimates and p values for all spatial and temporal windows considered. For \kbd{estimation = "lm"} it also returns a pseudo \eqn{R^2} value.
+   \code{data.frame} with estimates and p values for all spatial and temporal windows considered. For \kbd{estimation = "lm"} it also returns a pseudo \eqn{R^2} value. If additional control dimensions were included in the estimation, it further returns the corresponding coefficients and p values.
 }
    \item{matching}{
    \code{data.frame} with detailed matching statistics for all spatial and temporal windows considered. Returns the number of control and treatment episodes, L1 metric, percent common support. All values are given both pre and post matching.

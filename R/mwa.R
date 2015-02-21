@@ -153,15 +153,19 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
 }
 
 summary.matchedwake <- function(object, detailed = FALSE, ...){
-  significant_results <- subset(object$estimates,object$estimates$pvalue<=object$parameters$alpha1)
-  significant_results$estimate <- round(significant_results$estimate,digits=3)
-  significant_results$pvalue <- round(significant_results$pvalue,digits=3)
-  row.names(significant_results) <- NULL
   if (object$parameters$estimation == "lm"){
+    significant_results <- subset(object$estimates[,1:5],object$estimates$pvalue<=object$parameters$alpha1)
+    significant_results$estimate <- round(significant_results$estimate,digits=3)
+    significant_results$pvalue <- round(significant_results$pvalue,digits=3)
+    row.names(significant_results) <- NULL
     significant_results$adj.r.squared <- round(significant_results$adj.r.squared,digits=4)
-    names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]","EffectSize", "p_value","adj.Rsquared")
+    names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]","EffectSize", "p.value","adj.Rsquared")
   }else{
-    names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]","EffectSize", "p_value")
+    significant_results <- subset(object$estimates[,1:4],object$estimates$pvalue<=object$parameters$alpha1)
+    significant_results$estimate <- round(significant_results$estimate,digits=3)
+    significant_results$pvalue <- round(significant_results$pvalue,digits=3)
+    row.names(significant_results) <- NULL
+    names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]","EffectSize", "p.value")
   }
   if (detailed){
     significant_matching <- subset(object$matching,object$estimates$pvalue<=object$parameters$alpha1)
@@ -172,20 +176,32 @@ summary.matchedwake <- function(object, detailed = FALSE, ...){
     significant_results$SO <- 100*significant_SUTVA$SO
     significant_results$MO <- 100*significant_SUTVA$MO
     if (object$parameters$estimation == "lm"){
-      names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]", "EffectSize", "p_value", "adj.Rsquared", "%Treatment", "L1metric", "%supp", "%S0", "%MO")
+      names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]", "EffectSize", "p.value", "adj.Rsquared", "%treat", "L1metric", "%supp", "%S0", "%MO")
     }else{
-      names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]", "EffectSize", "p_value", "%Treatment", "L1metric", "%supp", "%S0", "%MO")
+      names(significant_results) <- c(paste("Time[",object$parameters$t_unit,"]",sep=""), "Space[km]", "EffectSize", "p.value", "%treat", "L1metric", "%supp", "%S0", "%MO")
     }
   }
   cat("Results:\n")
   if (nrow(significant_results)>0){
-    cat("The method has identified combinations of temporal and spatial window sizes with significant estimates. The table below gives the estimated effect sizes and p-values for these combinations.\n\n")
     if (detailed){
-      cat("NOTE: if a detailed summary was requested, the table also provides summary post-matching statistics as well as statistics on SUTVA violations:\nMatching:\n - '%Treatment' is short for the percentage of treatment events; the closer this is to 50%, the better the balance of treatment and control cases after matching\n - 'L1metric' measures the covariate balance after matching\n - '%supp' is short for percentage of common support after matching, a standard measure for the overlap of the range of covariate values\nSUTVA violations:\n - '%SO' gives the percentage of cases in which two or more treatment (or control) episodes overlap\n - '%MO' provides the fraction of overlapping treatment and control episodes\n\n")
+      cat("The method has identified combinations of temporal and spatial window sizes with significant estimates. The table below gives the estimated effect sizes and p-values for these combinations as well as summary post-matching statistics and statistics on SUTVA violations:\nMatching:\n - '%treat' is short for the percentage of treatment events; the closer this is to 50%, the better the balance of treatment and control cases after matching\n - 'L1metric' measures the covariate balance after matching\n - '%supp' is short for percentage of common support after matching, a standard measure for the overlap of the range of covariate values\nSUTVA violations:\n - '%SO' gives the percentage of cases in which two or more treatment (or control) episodes overlap\n - '%MO' provides the fraction of overlapping treatment and control episodes\n\n")
+    }else{
+      cat("The method has identified combinations of temporal and spatial window sizes with significant estimates. The table below gives the estimated effect sizes and p-values for these combinations.\n\n")
+    }   
+    if (length(object$parameters$estimationControls)>0){      
+      if (object$parameters$estimation == "lm"){
+        estControls <- subset(object$estimates[,c(6:(6+2*length(object$parameters$estimationControls)-1))],object$estimates$pvalue<=object$parameters$alpha1)
+        row.names(estControls) <- NULL
+      }else{
+        estControls <- subset(object$estimates[,c(5:(5+2*length(object$parameters$estimationControls)-1))],object$estimates$pvalue<=object$parameters$alpha1)
+        row.names(estControls) <- NULL
+      }
+      estControls <- round(estControls,digits=3)
+      cat("NOTE:\nYou have chosen to include additional control dimensions in the estimation. The corresponding coefficients and p values for those spatial and temporal window sizes with significant estimates may also be found in the table below.\n\n")
+      significant_results <- cbind(significant_results,estControls)
     }
     return(significant_results)
-  }
-  if (nrow(significant_results)==0){ 
+  }else{
     cat("The method could not identify any space and time windows with significant estimates.\n")
   }
 }
@@ -320,7 +336,7 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
     spatvarinput <- as.character(seq(spat_window[1],spat_window[2],length=(spat_window[2]-spat_window[1])/spat_window[3]+1))
   }
   if (length(estimationControls) > 0){
-    matchColums <- c(matchColumns,estimationControls)
+    matchColumns <- unique(c(matchColumns,estimationControls))
   }
   matchCol <- as.character(lapply(matchColumns,function(x) which(x==names(data))))
   mem <- .jcall("WakeCounter","Ljava/lang/String;","heapspace",simplify = TRUE)
@@ -421,11 +437,25 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
   t_windows <- as.numeric(as.character(sort(unique(wakes$t_window))))
   spat_windows <- as.numeric(as.character(sort(unique(wakes$spat_window))))
   if (estimation == "lm"){
-    estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 5))
-    names(estimates) <- c("t_window","spat_window","estimate","pvalue","adj.r.squared")
+    if (length(estimationControls>0)){
+      estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 5+2*length(estimationControls)))
+      estimationControls_labels <- c()
+      estimationControls_labels <- unlist(lapply(1:length(estimationControls),function(x) c(estimationControls_labels,paste(estimationControls[x],".coef",sep=""),paste(estimationControls[x],".pval",sep=""))))
+      names(estimates) <- c("t_window","spat_window","estimate","pvalue","adj.r.squared",estimationControls_labels)
+    }else{
+      estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 5))
+      names(estimates) <- c("t_window","spat_window","estimate","pvalue","adj.r.squared")
+    }
   }else{
-    estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 4))
-    names(estimates) <- c("t_window","spat_window","estimate","pvalue")
+    if (length(estimationControls>0)){
+      estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 4+2*length(estimationControls)))  
+      estimationControls_labels <- c()
+      estimationControls_labels <- unlist(lapply(1:length(estimationControls),function(x) c(estimationControls_labels,paste(estimationControls[x],".coef",sep=""),paste(estimationControls[x],".pval",sep=""))))
+      names(estimates) <- c("t_window","spat_window","estimate","pvalue",estimationControls_labels)
+    }else{
+      estimates<- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 4))
+      names(estimates) <- c("t_window","spat_window","estimate","pvalue")
+    }
   }
   matching <- as.data.frame(matrix(nrow = (length(t_windows) * length(spat_windows)),ncol = 10))
   names(matching) <- c("t_window","spat_window","control_pre","treatment_pre","L1_pre","commonSupport_pre","control_post","treatment_post","L1_post","commonSupport_post")
@@ -551,24 +581,42 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
       matching$treatment_post[matching$t_window == time & matching$spat_window == space] <- length(which(md$treatment == 1))
       matching$L1_post[matching$t_window == time & matching$spat_window == space] <- round(imbalance(group = md$treatment, data = md[matchColumns])$L1[[1]],3)
       matching$commonSupport_post[matching$t_window == time & matching$spat_window == space] <- round(imbalance(group = md$treatment, data = md[matchColumns])$L1[[3]],1)
+      estControls.coef <- c() 
+      estControls.pval <- c()
       if (estimation == "lm"){
         if (length(summary(fit)$coefficients[,1]) == nterms + 1){
           p_val <- summary(fit)$coefficients[nterms + 1,4]
           e_val <- summary(fit)$coefficients[nterms + 1,1]
           adj.r.squared <- summary(fit)$adj.r.squared
+          if (length(estimationControls)>0){
+            estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) summary(fit)$coefficients[2+x,4]))
+            estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) summary(fit)$coefficients[2+x,1]))
+          }
         } else {
           p_val <- 1
           e_val <- 0
           adj.r.squared <- 0
+          if (length(estimationControls)>0){
+            estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
+            estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
+          }
         }
       }
       if (estimation == "att"){
         if (length(fit$att.model[1,]) == nterms + 1){
           p_val <- fit$att.model[4,nterms + 1]
           e_val <- fit$att.model[1,nterms + 1]
+          if (length(estimationControls)>0){
+            estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) fit$att.model[4,2+x]))
+            estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) fit$att.model[1,2+x]))
+          }
         } else {
           p_val <- 1
           e_val <- 0
+          if (length(estimationControls)>0){
+            estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
+            estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
+          }
         }
       }
       if (estimation == "nb"){
@@ -576,19 +624,44 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
         if (length(summary$coefficients[,1]) == nterms + 1){
           p_val <- summary$coefficients[nterms+1,4]
           e_val <- summary$coefficients[nterms+1,1]
+          if (length(estimationControls)>0){
+            estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) summary$coefficients[2+x,4]))
+            estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) summary$coefficients[2+x,1]))
+          }
         } else {
           p_val <- 1
           e_val <- 0
+          if (length(estimationControls)>0){
+            estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
+            estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
+          }
         }
       }  
       if (is.na(p_val) || is.na(e_val) || is.nan(p_val) || is.nan(e_val)){
         p_val <- 1
         e_val <- 0
+        if (length(estimationControls)>0){
+          estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
+          estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
+        }
       }
       estimates$estimate[estimates$t_window == time & estimates$spat_window == space] <- e_val
       estimates$pvalue[estimates$t_window == time & estimates$spat_window == space] <- p_val
       if (estimation == "lm"){
         estimates$adj.r.squared[estimates$t_window == time & estimates$spat_window == space] <- adj.r.squared
+        if (length(estimationControls)>0){
+          maxentry <- 6+2*length(estimationControls)-1
+          entries <- c()
+          entries <- unlist(lapply(1:length(estimationControls),function(x) c(entries,estControls.coef[x],estControls.pval[x])))
+          estimates[estimates$t_window == time & estimates$spat_window == space,6:maxentry] <- entries
+        }
+      }else{
+        if (length(estimationControls)>0){
+          maxentry <- 5+2*length(estimationControls)-1
+          entries <- c()
+          entries <- unlist(lapply(1:length(estimationControls),function(x) c(entries,estControls.coef[x],estControls.pval[x])))
+          estimates[estimates$t_window == time & estimates$spat_window == space,5:maxentry] <- entries
+        }
       }
       sub <- subset(wakes,(wakes$t_window==time & wakes$spat_window==space))
       doubles_pre_sub <- subset(wakes, (wakes$t_window==time & wakes$spat_window==space & wakes$SO_pre>0))

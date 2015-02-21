@@ -1,7 +1,7 @@
 \name{slideWakeMatch}
 \alias{slideWakeMatch}
 \title{
-auxiliary function to match data and estimate treatment effects
+Auxiliary Function to Match Data and Estimate Treatment Effects
 }
 \description{
 Method takes the output of \code{\link{slidingWake}}, matches observations using \code{\link{cem}} and estimates treatment effects using linear models (\code{\link{lm}} or \code{\link{att}}) or a count dependent variable model (\code{\link{glm.nb}}).

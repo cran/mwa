@@ -1,7 +1,7 @@
 \name{print.matchedwake}
 \alias{print.matchedwake}
 \title{
-print function for objects of class \code{matchedwake}
+Print Function for Objects of Class \code{matchedwake}
 }
 \description{
 Overloads the default \code{print()} for objects of class \code{matchedwake}.

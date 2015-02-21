@@ -2,14 +2,14 @@
 \alias{mwa-package}
 \docType{package}
 \title{
-MWA: Analyzing causal relationships in spatiotemporal event data	
+Matched Wake Analysis (mwa): Analyzing causal relationships in spatiotemporal event data	
 }
 \description{
-MWA analyzes spatially and temporally referenced data. Specific types of events might affect subsequent levels of other events. To estimate the corresponding effect, treatment, control, and dependent events are selected from the empirical sample. Treatment effects are established through automated matching and a diff-in-diffs regression design. The analysis is repeated for various spatial and temporal offsets from the treatment events.     
+The package is designed to analyze causal relationships in spatially and temporally referenced data. Specific types of events might affect subsequent levels of other events. To estimate the corresponding effect, treatment, control, and dependent events are selected from the empirical sample. Treatment effects are established through automated matching and a diff-in-diffs regression design. The analysis is repeated for various spatial and temporal offsets from the treatment events.     
 
 }
 \details{
-The full functionality of MWA is given through \code{\link{matchedwake}}, which relies on a small set of auxiliary methods. Note that \code{print()}, \code{summary()} and \code{plot()} commands are overloaded to return outputs specific to class \code{matchedwake}. For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
+The full functionality of \pkg{mwa} is given through \code{\link{matchedwake}}, which relies on a small set of auxiliary methods. Note that \code{print()}, \code{summary()} and \code{plot()} commands are overloaded to return outputs specific to class \code{matchedwake}. For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
 
 \bold{IMPORTANT}: The size of the Java heap space has to be set before \bold{first} calling the package via \code{library(mwa)} since JVM size cannot change once it has been initialized. This also implies that R has to be restarted if another library was already using a JVM in order for the heap space option to have any effect. To set the heap space to 1 GB, for example, use \code{options(java.parameters = "-Xmx1g")} (512 MB is the default size).
 }

@@ -1,7 +1,7 @@
 \name{slidingWake}
 \alias{slidingWake}
 \title{
-auxiliary function to iterate through sliding spatiotemporal windows
+Auxiliary Function to Iterate Through Sliding Spatiotemporal Windows
 }
 \description{
 Method iterates through all spatial and temporal window sizes specified and counts dependent events with a given spatial window and for a given temporal window (symmetrically in forward and backward direction in time). For performance reasons, the iterative counting is done in Java using the \pkg{rJava} interface.
