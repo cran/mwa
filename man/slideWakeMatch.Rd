@@ -7,7 +7,7 @@ Auxiliary Function to Match Data and Estimate Treatment Effects
 Method takes the output of \code{\link{slidingWake}}, matches observations using \code{\link{cem}} and estimates treatment effects using linear models (\code{\link{lm}} or \code{\link{att}}) or a count dependent variable model (\code{\link{glm.nb}}).
 }
 \usage{
-slideWakeMatch(wakes, alpha1, matchColumns, estimation, weighted,
+slideWakeMatch(wakes, alpha1, matchColumns, estimation, formula, weighted,
                estimationControls, TCM, match.default, ...)
 }
 \arguments{
@@ -22,6 +22,9 @@ slideWakeMatch(wakes, alpha1, matchColumns, estimation, weighted,
 }
   \item{estimation}{
   String specifying method used for estimation.
+}
+  \item{formula}{
+  String specifying the model used for estimation.
 }
   \item{weighted}{
   Boolean specifying whether regression is weighted.

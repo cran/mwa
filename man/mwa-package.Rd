@@ -20,7 +20,7 @@ Sebastian Schutte and Karsten Donnay
 Schutte, S., Donnay, K. (2014). ``Matched wake analysis: Finding causal relationships in spatiotemporal event data.'' \emph{Political Geography} 41:1-10.
 }
 \seealso{
-   \code{\link{matchedwake}}, \code{\link{slidingWake}}, \code{\link{slideWakeMatch}}, \code{\link{print}}, \code{\link{summary}}, \code{\link{plot}}
+   \code{\link{matchedwake}}, \code{\link{slidingWake}}, \code{\link{slideWakeMatch}}, \code{\link{print.matchedwake}}, \code{\link{summary.matchedwake}}, \code{\link{plot.matchedwake}}
 }
 \examples{
 # Loading sample data
@@ -48,7 +48,7 @@ t_unit <- "days"
 # - match on counts of previous treatment and control events
 TCM <- TRUE
 
-\dontrun{
+\donttest{
 # Execute method:
 results <- matchedwake(mwa_data, t_window, spat_window, treatment, control, dependent,
                        matchColumns, weighted = weighted, t_unit = t_unit, TCM = TCM)

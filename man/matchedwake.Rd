@@ -11,6 +11,7 @@ This function performs the Matched Wake Analysis (mwa), which consists of two st
 \usage{
 matchedwake(data, t_window, spat_window, treatment, control,
             dependent, matchColumns, t_unit = "days", estimation = "lm",
+	    formula = "dependent_post ~ dependent_pre + treatment",
             weighted = FALSE, estimationControls = c(), TCM = FALSE,
             deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1,
             match.default = TRUE, ...)
@@ -42,6 +43,9 @@ matchedwake(data, t_window, spat_window, treatment, control,
 }
   \item{estimation}{
   String specifying method used for estimation, \kbd{"lm"}, \kbd{"att"} or \kbd{"nb"}. Default = \kbd{"lm"}. See Details.
+}
+\item{formula}{
+  String specifying the model used for estimation. Default = \kbd{"dependent_post ~ dependent_pre + treatment"}. See Details.
 }
   \item{weighted}{
   Boolean specifying whether regression is weighted (only affects estimations using \kbd{"lm"} or \kbd{"att"}). Default = \kbd{FALSE}.
@@ -79,7 +83,9 @@ matchedwake(data, t_window, spat_window, treatment, control,
 
   The optional argument \code{t_unit} specifies the temporal resolution for which the analysis is to be conducted, one of either \kbd{"days"}, \kbd{"hours"}, \kbd{"mins"} or \kbd{"secs"}. If the time stamps provided in \code{data} are more precise than the resolution they are truncated accordingly. 
 
-  \pkg{mwa} estimates treatment effects using a diff-in-diffs regression design, i.e. \kbd{"dependent_post ~ dependent_pre + treatment"} (where ``pre'' and ``post'' refer to pre and post intervention). Three different methods can be chosen using \code{estimation}: a linear model (\kbd{"lm"}, \pkg{stats}), all models available through (\kbd{"att"}, \pkg{cem}) or a count dependent model (\kbd{"glm.nb"}, \pkg{MASS}). For regressions using \kbd{"lm"} or \kbd{"att"} \code{weighted} sets whether or not the regression is weighted by the number of treatment vs. control cases. Additional control variables can be specified via \code{estimationControls}. For example, if \kbd{estimationControls = c("covariate1")}, the package automatically modifies the estimation formula to \kbd{"dependent_post ~ dependent_pre + covariate1 + treatment"}. In this case the output then also not only returns the estimate and p value for \kbd{treatment} but further returns the coefficients and p values for all additional control variables.
+  \pkg{mwa} estimates treatment effects using a diff-in-diffs regression design. By default this is specified as \kbd{"dependent_post ~ dependent_pre + treatment"} (where ``pre'' and ``post'' refer to pre and post intervention). Alternatively, \kbd{"dependent_post - dependent_pre ~ treatment"} is accepted. Only those two input specifications are allowed, any other input will result in an error.
+
+   Three different estimation approaches can be chosen using \code{estimation}: a linear model (\kbd{"lm"}, \pkg{stats}), all models available through (\kbd{"att"}, \pkg{cem}) or a count dependent model (\kbd{"glm.nb"}, \pkg{MASS}). For regressions using \kbd{"lm"} or \kbd{"att"} \code{weighted} sets whether or not the regression is weighted by the number of treatment vs. control cases. Additional control variables can be specified via \code{estimationControls}. For example, if \kbd{estimationControls = c("covariate1")}, the package automatically modifies the default estimation formula to \kbd{"dependent_post ~ dependent_pre + covariate1 + treatment"} (analogously for the other specification). In this case the output then also not only returns the estimate and p value for \kbd{treatment} but further returns the coefficients and p values for all additional control variables. 
 
  The package supports full inheritance for optional arguments of the following methods: \code{\link{cem}} and \code{\link{att}} (\pkg{cem}), \code{\link{lm}} (\pkg{stats}), \code{\link{glm.nb}} (\pkg{MASS}). To guarantee unique inputs for each method, options have to entered into \code{matchedwake()} using a prefix that consists of the method name separated by ``.''. For example, in order for \code{\link{cem}} to return an exactly balanced dataset simply add \code{cem.k2k = TRUE} as optional argument.
 }
@@ -140,7 +146,7 @@ t_unit <- "days"
 # - match on counts of previous treatment and control events
 TCM <- TRUE
 
-\dontrun{
+\donttest{
 # Execute method:
 results <- matchedwake(mwa_data, t_window, spat_window, treatment, control, dependent,
                        matchColumns, weighted = weighted, t_unit = t_unit, TCM = TCM)

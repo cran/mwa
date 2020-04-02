@@ -1,4 +1,4 @@
-matchedwake <- function(data, t_window, spat_window, treatment, control, dependent, matchColumns, t_unit = "days", estimation = "lm", weighted = FALSE, estimationControls = c(), TCM = FALSE, deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1, match.default = TRUE, ...){
+matchedwake <- function(data, t_window, spat_window, treatment, control, dependent, matchColumns, t_unit = "days", estimation = "lm", formula = "dependent_post ~ dependent_pre + treatment", weighted = FALSE, estimationControls = c(), TCM = FALSE, deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1, match.default = TRUE, ...){
   missing_arguments <- c()
   terminate <- FALSE
   if(missing(data)){   
@@ -127,6 +127,10 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     missing_arguments <- append(missing_arguments,'\n  matchColumns (Note: at least one matching covariate is required)')
     terminate <- TRUE
   }
+  if (!(formula=="dependent_post ~ dependent_pre + treatment" || formula=="dependent_post - dependent_pre ~ treatment")){
+    missing_arguments <- append(missing_arguments,'\n  formula (please only use one of two accepted diff-in-diff expressions)')
+    terminate <- TRUE
+  }
   missing_arguments <- append(missing_arguments,'\n')
   if (terminate){
     message("Error in matchedwake(data, t_window, spat_window,...):")
@@ -140,7 +144,7 @@ matchedwake <- function(data, t_window, spat_window, treatment, control, depende
     if (deleteSUTVA){
       wakes <- subset(wakes,(wakes$SO_pre==0 & wakes$MO_pre==0))
     }
-    matchedwake <- slideWakeMatch(wakes, alpha1, matchColumns, estimation, weighted, estimationControls, TCM, match.default, ...)
+    matchedwake <- slideWakeMatch(wakes, alpha1, matchColumns, estimation, formula, weighted, estimationControls, TCM, match.default, ...)
     if (!match.default){
       message("ATTENTION: match.default set to FALSE, data was not matched!")
     }
@@ -197,7 +201,7 @@ summary.matchedwake <- function(object, detailed = FALSE, ...){
         row.names(estControls) <- NULL
       }
       estControls <- round(estControls,digits=3)
-      cat("NOTE:\nYou have chosen to include additional control dimensions in the estimation. The corresponding coefficients and p values for those spatial and temporal window sizes with significant estimates may also be found in the table below.\n\n")
+      cat("NOTE:\nYou have chosen to include additional control dimensions in the estimation. The corresponding coefficients and p values may also be found in the table below.\n\n")
       significant_results <- cbind(significant_results,estControls)
     }
     return(significant_results)
@@ -206,7 +210,7 @@ summary.matchedwake <- function(object, detailed = FALSE, ...){
   }
 }
 
-plot.matchedwake <- function(x, ...){
+plot.matchedwake <- function(x, zlim = NA, plotNAs = TRUE, ...){
   density <- 3
   lty <- 2
   lwd <- 2
@@ -220,17 +224,20 @@ plot.matchedwake <- function(x, ...){
   eswcplot <- matrix(nrow=length(xAxis)+2,ncol=length(yAxis)+2)
   for (y in 1:length(yAxis)){
     for (x in 1:length(xAxis)){
-      eswcplot [x+1,y+1] <- as.numeric(pdata$estimate[pdata$t_window == yAxis[y] & pdata$spat_window == xAxis[x]])
-      pswcplot [x+1,y+1] <- as.numeric(pdata$pvalue[pdata$t_window == yAxis[y] & pdata$spat_window == xAxis[x]])
+      eswcplot[x+1,y+1] <- as.numeric(pdata$estimate[pdata$t_window == yAxis[y] & pdata$spat_window == xAxis[x]])
+      pswcplot[x+1,y+1] <- as.numeric(pdata$pvalue[pdata$t_window == yAxis[y] & pdata$spat_window == xAxis[x]])
     }
   }
+  if (plotNAs){
+    eswcplot[is.na(eswcplot)] <- 0
+  }
   for (y in 1:(length(yAxis)+2)){
-    eswcplot [1,y] <- eswcplot [2,y]
-    eswcplot [length(xAxis)+2,y] <- eswcplot [length(xAxis)+1,y]
+    eswcplot[1,y] <- eswcplot[2,y]
+    eswcplot[length(xAxis)+2,y] <- eswcplot[length(xAxis)+1,y]
   }
   for (x in 1:(length(xAxis)+2)){
-    eswcplot [x,1] <- eswcplot [x,2]
-    eswcplot [x,length(yAxis)+2] <- eswcplot [x,length(yAxis)+1]
+    eswcplot[x,1] <- eswcplot[x,2]
+    eswcplot[x,length(yAxis)+2] <- eswcplot[x,length(yAxis)+1]
   }
   if (length(xAxis)==1){
     xvals <- c(0,0.5,1)
@@ -258,7 +265,11 @@ plot.matchedwake <- function(x, ...){
     yhalfRectSize <- (1 / (length(yAxis) -1)) / 2
     ystepsize <- 1 / (length(yAxis) - 1)
   }
-  
+  if (is.na(zlim[1])){
+    zlims <- range(eswcplot[!is.na(eswcplot)], finite = TRUE)
+  }else{
+    zlims <- zlim
+  }
   
   filled.contour(x = xvals, y = yvals,eswcplot,xlab = "Spatial window in kilometers",
                  ylab=paste("Temporal window in ",t_unit,sep=""),
@@ -266,6 +277,7 @@ plot.matchedwake <- function(x, ...){
                  color.palette = gray.colors,
                  xlim = xlims,
                  ylim = ylims,
+                 zlim = zlims,
                  plot.axes = {
                    axis(1,labels=xAxis,at=xat)
                    axis(2,at=yat,labels=yAxis)
@@ -392,7 +404,7 @@ slidingWake <- function(data, t_unit, t_window, spat_window, treatment, control,
   return(wakesoutput)
 }
 
-slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, estimationControls, TCM, match.default, ...){
+slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, formula, weighted, estimationControls, TCM, match.default, ...){
   cat('Matching observations and estimating causal effect....')
   t_window <- spat_window <- NULL 
   ceminputs <- list(...)
@@ -419,7 +431,6 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
   if (length(nbinputs) > 0){
     names(nbinputs) <- unlist(lapply(1:length(nbinputs), function(x) unlist(strsplit(names(nbinputs[x]),split="glm.nb."))[2]))
   }
-  formula <- "dependent_post ~ dependent_pre + treatment"
   if (length(estimationControls) > 0){
     form_unlist <- unlist(strsplit(formula,split="\\+"))
     formula <- form_unlist[1]
@@ -429,7 +440,7 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
       }
     }
     for (term in 1:length(estimationControls)){
-      formula <- paste(formula,"+ ",estimationControls[term],sep="")
+      formula <- paste(formula," + ",estimationControls[term],sep="")
     }
     formula <- paste(formula," +",form_unlist[length(form_unlist)])
   }
@@ -513,6 +524,7 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
         }
       }
       match_data <- subset(wakes,t_window == time & spat_window == space)
+      match_data$dependent_diff <- match_data$dependent_post - match_data$dependent_pre
       matching$control_pre[matching$t_window == time & matching$spat_window == space] <- length(which(match_data$treatment == 0)) 
       matching$treatment_pre[matching$t_window == time & matching$spat_window == space] <- length(which(match_data$treatment == 1))
       matching$L1_pre[matching$t_window == time & matching$spat_window == space] <- round(imbalance(group = match_data$treatment, data = match_data[matchColumns])$L1[[1]],3)
@@ -553,28 +565,24 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
         mat <- list(call = call, strata = strata, n.strata = n.strata, vars = vars, drop = drop, treatment = treatment, n = n, groups = groups, g.names = g.names, n.groups = n.groups, group.idx = group.idx, group.len = group.len, mstrata = mstrata, mstrataID = mstrataID, matched = matched, baseline.group = baseline.group, tab = tab, k2k = k2k, w = w)
         class(mat) <- "cem.match"
       }
+      md <- match_data[mat$matched,]
       if (estimation == "lm"){
         if (weighted){
-          md <- match_data[mat$matched,]
           weights <- mat$w[mat$matched]
           fit <- do.call(lm,c(list(formula = as.formula(formula), data = md, weights = weights), lminputs))
         }else{
-          md <- match_data[mat$matched,]
           fit <- do.call(lm,c(list(formula = as.formula(formula), data = md), lminputs))
         }
       }
       if (estimation == "att"){
         if (weighted){
-          md <- match_data[mat$matched,]
           fit <- do.call(att,c(list(obj = mat, formula = as.formula(formula), data = X), attinputs))
         }else{
-          md <- match_data[mat$matched,]
           mat$w[mat$matched] <- rep(1,nrow(md))
           fit <- do.call(att,c(list(obj = mat, formula = as.formula(formula), data = X), attinputs))
         }
       }
       if (estimation == "nb"){
-        md <- match_data[mat$matched,]
         fit <- do.call(glm.nb,c(list(formula = as.formula(formula), data = md, link = "identity"), nbinputs))
       }
       matching$control_post[matching$t_window == time & matching$spat_window == space] <- length(which(md$treatment == 0)) 
@@ -588,14 +596,22 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
           p_val <- summary(fit)$coefficients[nterms + 1,4]
           e_val <- summary(fit)$coefficients[nterms + 1,1]
           adj.r.squared <- summary(fit)$adj.r.squared
+          intercept.pval <- summary(fit)$coefficients[1,4]
+          intercept <- summary(fit)$coefficients[1,1]
+          #npre.pval <- summary(fit)$coefficients[2,4]
+          #npre.coef <- summary(fit)$coefficients[2,1]
           if (length(estimationControls)>0){
             estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) summary(fit)$coefficients[2+x,4]))
             estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) summary(fit)$coefficients[2+x,1]))
           }
         } else {
-          p_val <- 1
-          e_val <- 0
-          adj.r.squared <- 0
+          p_val <- NA
+          e_val <- NA
+          adj.r.squared <- NA
+          intercept.pval <- NA
+          intercept <- NA
+          #npre.pval <- NA
+          #npre.coef <- NA
           if (length(estimationControls)>0){
             estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
             estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
@@ -606,13 +622,21 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
         if (length(fit$att.model[1,]) == nterms + 1){
           p_val <- fit$att.model[4,nterms + 1]
           e_val <- fit$att.model[1,nterms + 1]
+          intercept.pval <- fit$att.model[4,1] 
+          intercept <- fit$att.model[1,1]
+          npre.pval <- fit$att.model[4,2]
+          npre.coef <- fit$att.model[1,2]
           if (length(estimationControls)>0){
             estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) fit$att.model[4,2+x]))
             estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) fit$att.model[1,2+x]))
           }
         } else {
-          p_val <- 1
-          e_val <- 0
+          p_val <- NA
+          e_val <- NA
+          intercept.pval <- NA
+          intercept <- NA
+          npre.pval <- NA
+          npre.coef <- NA
           if (length(estimationControls)>0){
             estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
             estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
@@ -624,13 +648,21 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
         if (length(summary$coefficients[,1]) == nterms + 1){
           p_val <- summary$coefficients[nterms+1,4]
           e_val <- summary$coefficients[nterms+1,1]
+          intercept.pval <- summary$coefficients[1,4]
+          intercept <- summary$coefficients[1,1]
+          npre.pval <- summary$coefficients[2,4]
+          npre.coef <- summary$coefficients[2,1]
           if (length(estimationControls)>0){
             estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) summary$coefficients[2+x,4]))
             estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) summary$coefficients[2+x,1]))
           }
         } else {
-          p_val <- 1
-          e_val <- 0
+          p_val <- NA
+          e_val <- NA
+          intercept.pval <- NA
+          intercept <- NA
+          npre.pval <- NA
+          npre.coef <- NA
           if (length(estimationControls)>0){
             estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
             estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
@@ -638,8 +670,13 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
         }
       }  
       if (is.na(p_val) || is.na(e_val) || is.nan(p_val) || is.nan(e_val)){
-        p_val <- 1
-        e_val <- 0
+        p_val <- NA
+        e_val <- NA
+        adj.r.squared <- NA
+        intercept.pval <- NA
+        intercept <- NA
+        npost.pval <- NA
+        npost.coef <- NA
         if (length(estimationControls)>0){
           estControls.pval <- unlist(lapply(1:length(estimationControls),function(x) NA))
           estControls.coef <- unlist(lapply(1:length(estimationControls),function(x) NA))
@@ -663,6 +700,10 @@ slideWakeMatch <- function(wakes, alpha1, matchColumns, estimation, weighted, es
           estimates[estimates$t_window == time & estimates$spat_window == space,5:maxentry] <- entries
         }
       }
+      estimates$intercept[estimates$t_window == time & estimates$spat_window == space] <- intercept
+      estimates$intercept.pval[estimates$t_window == time & estimates$spat_window == space] <- intercept.pval
+      #estimates$npre.coef[estimates$t_window == time & estimates$spat_window == space] <- npre.coef
+      #estimates$npre.pval[estimates$t_window == time & estimates$spat_window == space] <- npre.pval
       sub <- subset(wakes,(wakes$t_window==time & wakes$spat_window==space))
       doubles_pre_sub <- subset(wakes, (wakes$t_window==time & wakes$spat_window==space & wakes$SO_pre>0))
       doubles_pre <- round(nrow(doubles_pre_sub)/nrow(sub),3)
