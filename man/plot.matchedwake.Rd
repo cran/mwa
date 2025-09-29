@@ -7,7 +7,7 @@ Plot Function for Objects of Class \code{matchedwake}
 Overloads the default \code{plot()} for objects of class \code{matchedwake}. Returns a contour plot: The lighter the color the larger the estimated treatment effect. The corresponding standard errors are indicated by shading out some of the estimates: No shading corresponds to \eqn{p<alpha1} for the treatment effect in the diff-in-diffs analysis. Dotted lines indicate p-values between \code{alpha1} and \code{alpha2} and full lines indicate \eqn{p>alpha2}. The cells indicating effect size and significance level are arranged in a table where each field corresponds to one specific combination of spatial and temporal sizes.
 }
 \usage{
-\method{plot}{matchedwake}(x, zlim = NA, plotNAs = TRUE, ...)
+\method{plot}{matchedwake}(x, zlim = NA, plotNAs = TRUE, adjust = "none", ...)
 }
 \arguments{
   \item{x}{
@@ -19,9 +19,15 @@ Overloads the default \code{plot()} for objects of class \code{matchedwake}. Ret
 \item{plotNAs}{
   Boolean indicating whether or not to visualize NA estimates as ``no effect'' (i.e. 0). \code{Default = TRUE}.
 }
+\item{adjust}{
+  Select p-value adjustment method for multiple testing, \code{Default = "none"}; takes values "none", "holm", "hochberg", "hommel", "bonferroni", "BH", "BY" or "fdr", see `?p.adjust` (\pkg{stats}) for details (Credit: David Armstrong, github.com/davidaarmstrong)
+}
   \item{\dots}{
   further arguments passed to or from other methods.
 }
+}
+\details{
+   The argument \code{adjust} allows to adjust p-values for multiple comparisons implementing the functionality of the \code{\link[stats]{p.adjust}} function of package \pkg{stats}. Given the nature of individual statistical estimation per unique combination of spatial and temporal windows, results might be vulnerable to multiple inference problems that require correction. Users can use any of the different corrections implemented in \code{\link[stats]{p.adjust}}, depending on which they think is most appropriate for their application at hand. By default no correction is applied.
 }
 \references{
 Schutte, S., Donnay, K. (2014). ``Matched wake analysis: Finding causal relationships in spatiotemporal event data.'' \emph{Political Geography} 41:1-10.

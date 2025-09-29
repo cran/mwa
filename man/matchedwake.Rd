@@ -14,7 +14,7 @@ matchedwake(data, t_window, spat_window, treatment, control,
 	    formula = "dependent_post ~ dependent_pre + treatment",
             weighted = FALSE, estimationControls = c(), TCM = FALSE,
             deleteSUTVA = FALSE, alpha1 = 0.05, alpha2 = 0.1,
-            match.default = TRUE, ...)
+            match.default = TRUE, match.details = FALSE, ...)
 }
 \arguments{
   \item{data}{
@@ -68,6 +68,9 @@ matchedwake(data, t_window, spat_window, treatment, control,
   \item{match.default}{
   Boolean to select whether observations are matched using \code{cem}. Default = \kbd{TRUE}.
 }
+  \item{match.details}{
+  Boolean to select whether detailed matching statistics are returned from \code{cem}. Default = \kbd{FALSE}.
+}
   \item{\dots}{
   optional parameters that can be passed to the methods used for matching and estimation. See Details.
 }
@@ -87,7 +90,7 @@ matchedwake(data, t_window, spat_window, treatment, control,
 
    Three different estimation approaches can be chosen using \code{estimation}: a linear model (\kbd{"lm"}, \pkg{stats}), all models available through (\kbd{"att"}, \pkg{cem}) or a count dependent model (\kbd{"glm.nb"}, \pkg{MASS}). For regressions using \kbd{"lm"} or \kbd{"att"} \code{weighted} sets whether or not the regression is weighted by the number of treatment vs. control cases. Additional control variables can be specified via \code{estimationControls}. For example, if \kbd{estimationControls = c("covariate1")}, the package automatically modifies the default estimation formula to \kbd{"dependent_post ~ dependent_pre + covariate1 + treatment"} (analogously for the other specification). In this case the output then also not only returns the estimate and p value for \kbd{treatment} but further returns the coefficients and p values for all additional control variables. 
 
- The package supports full inheritance for optional arguments of the following methods: \code{\link{cem}} and \code{\link{att}} (\pkg{cem}), \code{\link{lm}} (\pkg{stats}), \code{\link{glm.nb}} (\pkg{MASS}). To guarantee unique inputs for each method, options have to entered into \code{matchedwake()} using a prefix that consists of the method name separated by ``.''. For example, in order for \code{\link{cem}} to return an exactly balanced dataset simply add \code{cem.k2k = TRUE} as optional argument.
+ The package supports full inheritance for optional arguments of the following methods: \code{\link[cem]{cem}} and \code{\link[cem]{att}} (\pkg{cem}), \code{\link[stats]{lm}} (\pkg{stats}), \code{\link[MASS]{glm.nb}} (\pkg{MASS}). To guarantee unique inputs for each method, options have to entered into \code{matchedwake()} using a prefix that consists of the method name separated by ``.''. For example, in order for \code{\link[cem]{cem}} to return an exactly balanced dataset simply add \code{cem.k2k = TRUE} as optional argument.
 }
 \value{
   Returns an object of class \code{matchedwake}, which is a list of objects with the following slots:
@@ -102,6 +105,12 @@ matchedwake(data, t_window, spat_window, treatment, control,
 }
    \item{wakes}{
    \code{data.frame} providing the information for the spatiotemporal cylinders (or \code{wakes}) for all spatial and temporal windows considered. Returns the \code{eventID} (i.e. the index of the event in the time-ordered dataset), \code{treatment} (1: treatment episode, 0: control episode), counts of \code{dependent} events, overlaps (``SO'' and ``MO'') pre and post intervention, and the matching variables.
+}
+   \item{matched}{
+   \code{data.frame} with details on which observations were matched for all spatial and temporal windows considered. Returns the \code{eventID} (i.e. the index of the event in the time-ordered dataset), \code{treatment} (1: treatment episode, 0: control episode) and \code{matched} (1: matched, 0: not matched).
+}
+   \item{bins}{
+   \code{data.frame} with details for the bins used in cem matching for all spatial and temporal windows considered. Returns the bin information from cem (variable ``breaks'') for each \code{matchColumns}.
 }
    \item{parameters}{
    \code{list} of all arguments passed to the method.
